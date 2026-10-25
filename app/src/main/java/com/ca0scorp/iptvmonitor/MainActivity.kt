@@ -101,13 +101,34 @@ private fun IptvMonitorApp() {
         savedAccounts.any { it.username == account.username && it.server.serverUrl == account.server.serverUrl }
 
     fun saveAccount(account: IptvAccountDetails) {
-        if (!isSaved(account)) {
-            val updated = savedAccounts + account.copy(hasSavedPassword = !account.password.isNullOrBlank())
-            savedStore.save(updated)
-            savedAccounts = updated
-            message = "Cuenta activa guardada en este dispositivo."
+        val matches: (IptvAccountDetails) -> Boolean = {
+            it.username == account.username && it.server.serverUrl == account.server.serverUrl
+        }
+        val existing = savedAccounts.indexOfFirst(matches)
+        val savedCopy = account.copy(
+            id = if (existing >= 0) savedAccounts[existing].id else account.id,
+            hasSavedPassword = !account.password.isNullOrBlank()
+        )
+        val updated = if (existing >= 0) {
+            savedAccounts.mapIndexed { index, old -> if (index == existing) savedCopy else old }
+        } else {
+            savedAccounts + savedCopy
+        }
+        savedStore.save(updated)
+        savedAccounts = updated
+        message = if (existing >= 0) {
+            "Cuenta guardada actualizada con los datos y la contraseña disponibles."
+        } else {
+            "Cuenta activa guardada en este dispositivo."
         }
     }
+
+    fun needsPasswordUpdate(account: IptvAccountDetails): Boolean =
+        !account.password.isNullOrBlank() && savedAccounts.any {
+            it.username == account.username &&
+                it.server.serverUrl == account.server.serverUrl &&
+                it.password.isNullOrBlank()
+        }
 
     fun removeSaved(account: IptvAccountDetails) {
         val updated = savedAccounts.filterNot { it.id == account.id }
@@ -151,7 +172,7 @@ private fun IptvMonitorApp() {
                 AccountDetailScreen(
                     account = selected!!,
                     modifier = Modifier.weight(1f),
-                    isSaved = isSaved(selected!!),
+                    isSaved = isSaved(selected!!) && !needsPasswordUpdate(selected!!),
                     onSave = { saveAccount(selected!!) }
                 )
             }
@@ -281,9 +302,15 @@ private fun IptvMonitorApp() {
                                     if (account.accountStatus == AccountStatus.ACTIVE || account.accountStatus == AccountStatus.TRIAL) {
                                         TextButton(
                                             onClick = { saveAccount(account) },
-                                            enabled = !isSaved(account)
+                                            enabled = !isSaved(account) || needsPasswordUpdate(account)
                                         ) {
-                                            Text(if (isSaved(account)) "Guardada" else "Guardar cuenta activa")
+                                            Text(
+                                                when {
+                                                    needsPasswordUpdate(account) -> "Actualizar contraseña guardada"
+                                                    isSaved(account) -> "Guardada"
+                                                    else -> "Guardar cuenta activa"
+                                                }
+                                            )
                                         }
                                     }
                                 }
