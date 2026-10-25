@@ -102,7 +102,7 @@ private fun IptvMonitorApp() {
 
     fun saveAccount(account: IptvAccountDetails) {
         if (!isSaved(account)) {
-            val updated = savedAccounts + account.copy(hasSavedPassword = false)
+            val updated = savedAccounts + account.copy(hasSavedPassword = !account.password.isNullOrBlank())
             savedStore.save(updated)
             savedAccounts = updated
             message = "Cuenta activa guardada en este dispositivo."
