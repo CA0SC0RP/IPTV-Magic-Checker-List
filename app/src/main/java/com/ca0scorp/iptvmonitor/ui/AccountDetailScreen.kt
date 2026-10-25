@@ -102,11 +102,7 @@ fun AccountDetailScreen(
 
         DetailSection("Datos de la cuenta") {
             DetailRow("Usuario", account.username.displayValue())
-            DetailRow("Contraseña", when {
-                account.hasSavedPassword -> "Guardada · protegida"
-                account.credentialsDetected -> "•••••••• (no almacenada)"
-                else -> "No disponible"
-            })
+            DetailRow("Contraseña", account.password?.takeIf { it.isNotBlank() } ?: "No disponible")
             DetailRow("Tipo de cuenta", account.accountType.displayValue())
             DetailRow("Fecha de creación", account.createdAt.formatDate())
             DetailRow("Fecha de vencimiento", account.expiresAt.formatDate())
