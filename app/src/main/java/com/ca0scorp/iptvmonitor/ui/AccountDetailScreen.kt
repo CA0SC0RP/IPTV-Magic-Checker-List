@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -76,7 +77,11 @@ fun AccountDetailScreen(
             Button(
                 onClick = onSave,
                 enabled = !isSaved,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Text(if (isSaved) "Cuenta guardada" else "Guardar esta cuenta")
             }
@@ -157,7 +162,7 @@ private fun MetricCard(title: String, value: String, modifier: Modifier = Modifi
     ) {
         Column(Modifier.padding(14.dp)) {
             Text(title, style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                color = MaterialTheme.colorScheme.secondary)
             Spacer(Modifier.height(8.dp))
             Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         }
@@ -168,7 +173,7 @@ private fun MetricCard(title: String, value: String, modifier: Modifier = Modifi
 private fun DetailSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             HorizontalDivider()
             content(this)
         }
