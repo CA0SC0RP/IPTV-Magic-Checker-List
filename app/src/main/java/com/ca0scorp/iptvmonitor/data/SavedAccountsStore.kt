@@ -36,7 +36,7 @@ class SavedAccountsStore(context: Context) {
         put("expiresAt", account.expiresAt?.toString().jsonValue())
         put("activeConnections", account.connections.activeConnections.jsonValue())
         put("maxConnections", account.connections.maxConnections.jsonValue())
-        put("supportedFormats", account.supportedFormats?.let { formats -> JSONArray().apply { formats.forEach(::put) } } ?: JSONObject.NULL)
+        put("supportedFormats", account.supportedFormats?.let { formats -> JSONArray().apply { formats.forEach { put(it) } } } ?: JSONObject.NULL)
         put("serverUrl", account.server.serverUrl.jsonValue())
         put("httpPort", account.server.httpPort.jsonValue())
         put("httpsPort", account.server.httpsPort.jsonValue())
