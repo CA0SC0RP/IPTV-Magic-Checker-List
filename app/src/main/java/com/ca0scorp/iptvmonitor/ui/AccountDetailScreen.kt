@@ -83,7 +83,7 @@ fun AccountDetailScreen(
         }
 
         DetailSection("Account Details") {
-            DetailRow("Usuario", account.username.maskUsername())
+            DetailRow("Usuario", account.username.displayValue())
             DetailRow("Contraseña", when {
                 account.hasSavedPassword -> "Guardada · protegida"
                 account.credentialsDetected -> "•••••••• (no almacenada)"
