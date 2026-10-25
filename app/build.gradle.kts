@@ -10,8 +10,28 @@ android {
         applicationId = "com.ca0scorp.iptvmonitor"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // Use a monotonically increasing code for each GitHub Actions build.
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        versionName = "0.1.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
+    }
+    signingConfigs {
+        create("stableDebug") {
+            val signingStoreFile = System.getenv("IPTV_SIGNING_STORE_FILE")
+            if (!signingStoreFile.isNullOrBlank()) {
+                storeFile = file(signingStoreFile)
+                storePassword = System.getenv("IPTV_SIGNING_STORE_PASSWORD")
+                keyAlias = System.getenv("IPTV_SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("IPTV_SIGNING_KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        getByName("debug") {
+            // If a stable keystore is configured in GitHub Secrets, reuse it for every APK.
+            if (!System.getenv("IPTV_SIGNING_STORE_FILE").isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("stableDebug")
+            }
+        }
     }
     buildFeatures { compose = true }
     compileOptions {
