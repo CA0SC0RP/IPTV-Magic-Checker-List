@@ -54,7 +54,7 @@ class IptvChecker {
                 val code = connection.responseCode
                 if (code !in 200..299) {
                     return IptvAccountDetails(
-                        id = id, accountName = displayName, username = username, credentialsDetected = true,
+                        id = id, accountName = displayName, username = username, password = password, credentialsDetected = true,
                         server = ServerInfo(serverUrl = baseUrl, protocol = uri.scheme.uppercase()),
                         serverTime = ServerTimeInfo(status = ServerStatus.ONLINE),
                         lastCheckedAt = checkedAt,
@@ -110,7 +110,8 @@ class IptvChecker {
                     id = id,
                     accountName = displayName,
                     username = string(user, "username") ?: username,
-                    hasSavedPassword = false,
+                    password = password,
+                    hasSavedPassword = true,
                     credentialsDetected = true,
                     accountType = if (isTrial) "Trial account" else string(user, "account_type") ?: "No especificado por el proveedor",
                     accountStatus = accountStatus,
