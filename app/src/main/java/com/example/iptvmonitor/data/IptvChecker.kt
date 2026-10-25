@@ -30,9 +30,8 @@ class IptvChecker {
                 )
             }
 
-            val path = uri.path.orEmpty()
-            val basePath = if (path.endsWith("/get.php") || path.endsWith("/get.m3u") || path.endsWith("/get.php/")) path.substringBeforeLast("/") else path.trimEnd('/')
-            val base = "${uri.scheme}://${uri.rawAuthority}" + if (basePath.isBlank()) "" else basePath
+            // Use the origin only: playlist paths such as /get.php or /live/... are not API base paths.
+            val base = "${uri.scheme}://${uri.rawAuthority}"
             val apiUrl = URL("$base/player_api.php?username=${encode(username)}&password=${encode(password)}")
             val connection = (apiUrl.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
