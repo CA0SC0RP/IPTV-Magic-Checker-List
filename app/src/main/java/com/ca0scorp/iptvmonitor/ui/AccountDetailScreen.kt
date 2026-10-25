@@ -59,7 +59,7 @@ fun AccountDetailScreen(
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Welcome / Account Status", style = MaterialTheme.typography.titleMedium,
+                Text("Estado de la cuenta", style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(4.dp))
                 Text(accountName, style = MaterialTheme.typography.headlineSmall,
@@ -82,7 +82,7 @@ fun AccountDetailScreen(
             MetricCard("Conexiones", connectionSummary(account), Modifier.weight(1f))
         }
 
-        DetailSection("Account Details") {
+        DetailSection("Datos de la cuenta") {
             DetailRow("Usuario", account.username.displayValue())
             DetailRow("Contraseña", when {
                 account.hasSavedPassword -> "Guardada · protegida"
@@ -94,13 +94,13 @@ fun AccountDetailScreen(
             DetailRow("Fecha de vencimiento", account.expiresAt.formatDate())
         }
 
-        DetailSection("Connections") {
+        DetailSection("Conexiones") {
             DetailRow("Conexiones activas", account.connections.activeConnections.displayValue())
             DetailRow("Conexiones máximas", account.connections.maxConnections.displayValue())
             DetailRow("Disponibles", availableConnections(account))
         }
 
-        DetailSection("Supported Formats") {
+        DetailSection("Formatos compatibles") {
             when {
                 account.supportedFormats == null -> DetailRow("Formatos", "No disponible")
                 account.supportedFormats.isEmpty() -> DetailRow("Formatos", "El servidor no informó formatos")
@@ -112,7 +112,7 @@ fun AccountDetailScreen(
             }
         }
 
-        DetailSection("Server Information") {
+        DetailSection("Información del servidor") {
             DetailRow("Servidor URL", account.server.serverUrl.displayValue())
             DetailRow("HTTP port", account.server.httpPort.displayValue())
             DetailRow("HTTPS port", account.server.httpsPort.displayValue())
@@ -120,7 +120,7 @@ fun AccountDetailScreen(
             DetailRow("Protocolo", account.server.protocol.displayValue())
         }
 
-        DetailSection("Server Time & Status") {
+        DetailSection("Hora y estado del servidor") {
             DetailRow("Hora del servidor", account.serverTime.serverTime.formatDate())
             DetailRow("Zona horaria", account.serverTime.timeZone.displayValue())
             DetailRow("Estado del servidor", account.serverTime.status.label())
