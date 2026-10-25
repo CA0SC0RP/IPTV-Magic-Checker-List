@@ -4,6 +4,7 @@
     <application
         android:allowBackup="false"
         android:label="IPTV Monitor"
+        android:icon="@drawable/ic_iptv_monitor"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="true">
