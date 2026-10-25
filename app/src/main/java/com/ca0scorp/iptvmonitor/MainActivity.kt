@@ -20,6 +20,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -33,6 +35,7 @@ import androidx.compose.runtime.*
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ca0scorp.iptvmonitor.data.AccountStatus
@@ -47,7 +50,23 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MaterialTheme { IptvMonitorApp() } }
+        setContent {
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = Color(0xFF65E6D2),
+                    onPrimary = Color(0xFF06201D),
+                    secondary = Color(0xFFB7A6FF),
+                    onSecondary = Color(0xFF211747),
+                    tertiary = Color(0xFFFFC078),
+                    background = Color(0xFF0A0F16),
+                    surface = Color(0xFF111A25),
+                    surfaceVariant = Color(0xFF202D3B),
+                    onSurface = Color(0xFFEAF2FA),
+                    onSurfaceVariant = Color(0xFF9EADBD),
+                    error = Color(0xFFFF7D8A)
+                )
+            ) { IptvMonitorApp() }
+        }
     }
 }
 
@@ -58,7 +77,6 @@ private fun IptvMonitorApp() {
     val checker = remember { IptvChecker() }
     val savedStore = remember { SavedAccountsStore(context.applicationContext) }
     val scope = rememberCoroutineScope()
-    var mode by remember { mutableIntStateOf(0) }
     var urlInput by remember { mutableStateOf("") }
     var accounts by remember { mutableStateOf<List<IptvAccountDetails>>(emptyList()) }
     var savedAccounts by remember { mutableStateOf(savedStore.load()) }
@@ -95,11 +113,17 @@ private fun IptvMonitorApp() {
         message = "Cuenta quitada de guardadas."
     }
 
-    Scaffold(topBar = {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
         TopAppBar(
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                titleContentColor = MaterialTheme.colorScheme.onSurface
+            ),
             title = { Column {
-                Text("IPTV Monitor")
-                Text("Comprobador de cuentas", style = MaterialTheme.typography.labelMedium)
+                Text("IPTV Monitor", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text("COMPROBADOR DE CUENTAS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             } },
             actions = {
                 TextButton(onClick = { showAbout = true }) { Text("Acerca de") }
@@ -132,28 +156,33 @@ private fun IptvMonitorApp() {
                 Modifier.fillMaxSize().padding(padding).imePadding().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    SegmentedButton(selected = mode == 0, onClick = { mode = 0 }, shape = SegmentedButtonDefaults.itemShape(0, 2)) { Text("Una lista") }
-                    SegmentedButton(selected = mode == 1, onClick = { mode = 1 }, shape = SegmentedButtonDefaults.itemShape(1, 2)) { Text("Varias listas") }
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("COMPROBACIÓN IPTV", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("Revisa tus listas", style = MaterialTheme.typography.headlineSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Text(
+                            "Pega una URL o varias, una por línea. Se comprobarán en una sola operación.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-                Text(
-                    if (mode == 0) "Pega una URL para consultar la información que publique el proveedor."
-                    else "Pega una URL por línea. Las consultas se ejecutan secuencialmente.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
                 OutlinedTextField(
                     value = urlInput,
                     onValueChange = { urlInput = it },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 110.dp, max = 200.dp),
-                    label = { Text(if (mode == 0) "URL de la lista" else "Una URL por línea") },
-                    placeholder = { Text("https://servidor.example/get.php?username=…&password=…") },
-                    minLines = if (mode == 0) 2 else 4,
+                    label = { Text("URL o URLs de tus listas") },
+                    placeholder = { Text("Pega una URL por línea…") },
+                    minLines = 3,
                     maxLines = 7
                 )
                 Button(
                     onClick = {
-                        val urls = (if (mode == 0) urlInput.lineSequence().firstOrNull().orEmpty() else urlInput)
-                            .lines().map(String::trim).filter(String::isNotBlank).distinct()
+                        val urls = urlInput.lines()
+                            .map(String::trim).filter(String::isNotBlank).distinct()
                         if (urls.isEmpty()) {
                             message = "Introduce al menos una URL."
                         } else if (!busy) {
@@ -174,10 +203,10 @@ private fun IptvMonitorApp() {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (busy) {
-                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                         Spacer(Modifier.padding(start = 8.dp))
                         Text("Comprobando…")
-                    } else Text(if (mode == 0) "Consultar cuenta" else "Consultar todas")
+                    } else Text("Comprobar listas")
                 }
                 message?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary) }
 
