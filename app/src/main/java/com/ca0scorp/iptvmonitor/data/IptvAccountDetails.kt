@@ -35,6 +35,7 @@ data class IptvAccountDetails(
     val username: String? = null,
     // Only indicates whether credentials are in secure storage; never store the password here.
     val hasSavedPassword: Boolean = false,
+    val credentialsDetected: Boolean = false,
     val accountType: String? = null,
     val accountStatus: AccountStatus = AccountStatus.UNKNOWN,
     val createdAt: Instant? = null,
@@ -44,5 +45,6 @@ data class IptvAccountDetails(
     val supportedFormats: List<String>? = null,
     val server: ServerInfo = ServerInfo(),
     val serverTime: ServerTimeInfo = ServerTimeInfo(),
-    val lastCheckedAt: Instant? = null
+    val lastCheckedAt: Instant? = null,
+    val error: String? = null
 )
