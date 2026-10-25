@@ -76,6 +76,7 @@ private fun IptvMonitorApp() {
     val scope = rememberCoroutineScope()
     var urlInput by remember { mutableStateOf("") }
     var accounts by remember { mutableStateOf<List<IptvAccountDetails>>(emptyList()) }
+    var showAllResults by remember { mutableStateOf(false) }
     var savedAccounts by remember { mutableStateOf(savedStore.load()) }
     var selected by remember { mutableStateOf<IptvAccountDetails?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -129,6 +130,7 @@ private fun IptvMonitorApp() {
                     onClick = {
                         urlInput = ""
                         accounts = emptyList()
+                        showAllResults = false
                         selected = null
                         message = "Búsqueda y resultados limpiados. Las cuentas guardadas se conservaron."
                     }
@@ -207,6 +209,10 @@ private fun IptvMonitorApp() {
                 }
                 message?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary) }
 
+                val workingAccounts = accounts.filter {
+                    it.accountStatus == AccountStatus.ACTIVE || it.accountStatus == AccountStatus.TRIAL
+                }
+                val displayedAccounts = if (showAllResults) accounts else workingAccounts
                 LazyColumn(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -230,9 +236,26 @@ private fun IptvMonitorApp() {
                         }
                     } else {
                         item(key = "results-heading") {
-                            Text("Resultados del escaneo (${accounts.size})", style = MaterialTheme.typography.titleMedium)
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Listas funcionales (${workingAccounts.size})", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "${accounts.size - workingAccounts.size} lista(s) no confirmada(s) o no funcional(es).",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                TextButton(onClick = { showAllResults = !showAllResults }) {
+                                    Text(if (showAllResults) "Mostrar solo funcionales" else "Ver todos los resultados (${accounts.size})")
+                                }
+                                if (displayedAccounts.isEmpty()) {
+                                    Text(
+                                        "No se encontraron cuentas confirmadas como activas o de prueba. Puedes revisar todos los resultados.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
-                        items(accounts, key = { "result-${it.id}" }) { account ->
+                        items(displayedAccounts, key = { "result-${it.id}" }) { account ->
                             Card(
                                 Modifier.fillMaxWidth(),
                                 colors = androidx.compose.material3.CardDefaults.cardColors(
