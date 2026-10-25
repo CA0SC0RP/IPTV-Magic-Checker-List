@@ -2,6 +2,7 @@ package com.ca0scorp.iptvmonitor
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -83,6 +84,10 @@ private fun IptvMonitorApp() {
     var message by remember { mutableStateOf<String?>(null) }
     var showAbout by remember { mutableStateOf(false) }
     var showWelcome by remember { mutableStateOf(!context.getSharedPreferences("iptv_monitor_ui", 0).getBoolean("welcome_seen", false)) }
+
+    BackHandler(enabled = selected != null) {
+        selected = null
+    }
 
     LaunchedEffect(showWelcome) {
         if (showWelcome) {
