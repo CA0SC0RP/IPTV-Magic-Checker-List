@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -63,6 +65,16 @@ private fun IptvMonitorApp() {
     var selected by remember { mutableStateOf<IptvAccountDetails?>(null) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    var showAbout by remember { mutableStateOf(false) }
+    var showWelcome by remember { mutableStateOf(!context.getSharedPreferences("iptv_monitor_ui", 0).getBoolean("welcome_seen", false)) }
+
+    LaunchedEffect(showWelcome) {
+        if (showWelcome) {
+            delay(1600)
+            showWelcome = false
+            context.getSharedPreferences("iptv_monitor_ui", 0).edit().putBoolean("welcome_seen", true).apply()
+        }
+    }
 
     fun isSaved(account: IptvAccountDetails): Boolean =
         savedAccounts.any { it.username == account.username && it.server.serverUrl == account.server.serverUrl }
@@ -90,6 +102,7 @@ private fun IptvMonitorApp() {
                 Text("Comprobador de cuentas", style = MaterialTheme.typography.labelMedium)
             } },
             actions = {
+                TextButton(onClick = { showAbout = true }) { Text("Acerca de") }
                 TextButton(
                     enabled = !busy,
                     onClick = {
@@ -243,6 +256,48 @@ private fun IptvMonitorApp() {
                 }
             }
         }
+    }
+
+    if (showWelcome) {
+        AlertDialog(
+            onDismissRequest = {
+                showWelcome = false
+                context.getSharedPreferences("iptv_monitor_ui", 0).edit().putBoolean("welcome_seen", true).apply()
+            },
+            title = { Text("IPTV Monitor") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("▤  📺", style = MaterialTheme.typography.headlineLarge)
+                    Text("Bienvenido al comprobador de listas IPTV", style = MaterialTheme.typography.titleMedium)
+                    Text("CAOSCORP × ChatGPT", style = MaterialTheme.typography.bodyMedium)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showWelcome = false
+                    context.getSharedPreferences("iptv_monitor_ui", 0).edit().putBoolean("welcome_seen", true).apply()
+                }) { Text("Comenzar") }
+            }
+        )
+    }
+
+    if (showAbout) {
+        AlertDialog(
+            onDismissRequest = { showAbout = false },
+            title = { Text("Acerca de IPTV Monitor") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Creado por CAOSCORP", style = MaterialTheme.typography.titleMedium)
+                    Text("Desarrollado con asistencia de ChatGPT, de OpenAI, para apoyar el diseño, la programación y la resolución de problemas.")
+                    Text("Una iniciativa que combina creatividad humana e inteligencia artificial para crear tecnología y compartirla con el mundo.")
+                    Text("GRATUITO: esta aplicación se ofrece sin coste. No está autorizada su venta ni su redistribución comercial sin permiso de CAOSCORP.")
+                    Text("Privacidad y seguridad: las consultas se comunican con los servidores IPTV indicados por el usuario. Utiliza fuentes de confianza y no compartas credenciales con terceros. No se garantiza ausencia absoluta de riesgos o malware.")
+                    Text("CAOSCORP × ChatGPT · Versión 0.1.0")
+                }
+            },
+            confirmButton = { TextButton(onClick = { showAbout = false }) { Text("Cerrar") }
+            }
+        )
     }
 }
 
