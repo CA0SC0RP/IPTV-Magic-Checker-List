@@ -33,7 +33,8 @@ data class IptvAccountDetails(
     val id: String,
     val accountName: String? = null,
     val username: String? = null,
-    // Only indicates whether credentials are in secure storage; never store the password here.
+    // Password is kept in memory and encrypted with Android Keystore when saved locally.
+    val password: String? = null,
     val hasSavedPassword: Boolean = false,
     val credentialsDetected: Boolean = false,
     val accountType: String? = null,
