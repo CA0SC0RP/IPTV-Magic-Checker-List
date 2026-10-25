@@ -73,7 +73,7 @@ fun AccountDetailScreen(
                 title = "Días restantes",
                 value = when {
                     account.expiresAt == null -> "No disponible"
-                    account.accountStatus == AccountStatus.EXPIRED -> "Vencida"
+                    account.expiresAt.isBefore(now) || account.accountStatus == AccountStatus.EXPIRED -> "Vencida"
                     else -> daysRemaining?.toString() ?: "No disponible"
                 },
                 modifier = Modifier.weight(1f)
@@ -83,7 +83,11 @@ fun AccountDetailScreen(
 
         DetailSection("Account Details") {
             DetailRow("Usuario", account.username.maskUsername())
-            DetailRow("Contraseña", if (account.hasSavedPassword) "Guardada · protegida" else "No disponible")
+            DetailRow("Contraseña", when {
+                account.hasSavedPassword -> "Guardada · protegida"
+                account.credentialsDetected -> "•••••••• (no almacenada)"
+                else -> "No disponible"
+            })
             DetailRow("Tipo de cuenta", account.accountType.displayValue())
             DetailRow("Fecha de creación", account.createdAt.formatDate())
             DetailRow("Fecha de vencimiento", account.expiresAt.formatDate())
@@ -120,6 +124,7 @@ fun AccountDetailScreen(
             DetailRow("Zona horaria", account.serverTime.timeZone.displayValue())
             DetailRow("Estado del servidor", account.serverTime.status.label())
             DetailRow("Última comprobación", account.lastCheckedAt.formatDate())
+            account.error?.let { DetailRow("Resultado", it) }
         }
 
         Text(
