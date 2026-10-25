@@ -120,7 +120,12 @@ private fun IptvMonitorApp() {
                 TextButton(onClick = { selected = null }, modifier = Modifier.padding(horizontal = 8.dp)) {
                     Text("← Volver")
                 }
-                AccountDetailScreen(account = selected!!, modifier = Modifier.weight(1f))
+                AccountDetailScreen(
+                    account = selected!!,
+                    modifier = Modifier.weight(1f),
+                    isSaved = isSaved(selected!!),
+                    onSave = { saveAccount(selected!!) }
+                )
             }
         } else {
             Column(
