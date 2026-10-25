@@ -80,7 +80,7 @@ class IptvChecker {
         } catch (_: java.net.SocketTimeoutException) {
             IptvAccountDetails(id, trimmed, accountName = displayName, serverStatus = "OFFLINE", error = "Tiempo de espera agotado: el servidor no respondió a tiempo.", checkedAt = now)
         } catch (e: Exception) {
-            IptvAccountDetails(id, trimmed, accountName = displayName, serverStatus = "UNKNOWN", error = e.message?.take(240) ?: "No se pudo analizar la URL.", checkedAt = now)
+            IptvAccountDetails(id, trimmed, accountName = displayName, serverStatus = "UNKNOWN", error = "No se pudo analizar la URL o consultar la API. Revisa el formato y la conectividad.", checkedAt = now)
         }
     }
 
