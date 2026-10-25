@@ -17,24 +17,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ca0scorp.iptvmonitor.data.AccountStatus
 import com.ca0scorp.iptvmonitor.data.IptvAccountDetails
 import com.ca0scorp.iptvmonitor.data.IptvChecker
+import com.ca0scorp.iptvmonitor.data.SavedAccountsStore
 import com.ca0scorp.iptvmonitor.ui.AccountDetailScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -50,14 +52,36 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun IptvMonitorApp() {
+    val context = LocalContext.current
     val checker = remember { IptvChecker() }
+    val savedStore = remember { SavedAccountsStore(context.applicationContext) }
     val scope = rememberCoroutineScope()
     var mode by remember { mutableIntStateOf(0) }
     var urlInput by remember { mutableStateOf("") }
     var accounts by remember { mutableStateOf<List<IptvAccountDetails>>(emptyList()) }
+    var savedAccounts by remember { mutableStateOf(savedStore.load()) }
     var selected by remember { mutableStateOf<IptvAccountDetails?>(null) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+
+    fun isSaved(account: IptvAccountDetails): Boolean =
+        savedAccounts.any { it.username == account.username && it.server.serverUrl == account.server.serverUrl }
+
+    fun saveAccount(account: IptvAccountDetails) {
+        if (!isSaved(account)) {
+            val updated = savedAccounts + account.copy(hasSavedPassword = false)
+            savedStore.save(updated)
+            savedAccounts = updated
+            message = "Cuenta activa guardada en este dispositivo."
+        }
+    }
+
+    fun removeSaved(account: IptvAccountDetails) {
+        val updated = savedAccounts.filterNot { it.id == account.id }
+        savedStore.save(updated)
+        savedAccounts = updated
+        message = "Cuenta quitada de guardadas."
+    }
 
     Scaffold(topBar = {
         TopAppBar(
@@ -65,12 +89,24 @@ private fun IptvMonitorApp() {
                 Text("IPTV Monitor")
                 Text("Comprobador de cuentas", style = MaterialTheme.typography.labelMedium)
             } },
-            actions = { TextButton(onClick = { accounts = emptyList(); selected = null; message = "Resultados limpiados." }) { Text("Limpiar") } }
+            actions = {
+                TextButton(
+                    enabled = !busy,
+                    onClick = {
+                        urlInput = ""
+                        accounts = emptyList()
+                        selected = null
+                        message = "Búsqueda y resultados limpiados. Las cuentas guardadas se conservaron."
+                    }
+                ) { Text("Limpiar") }
+            }
         )
     }) { padding ->
         if (selected != null) {
             Column(Modifier.fillMaxSize().padding(padding)) {
-                TextButton(onClick = { selected = null }, modifier = Modifier.padding(horizontal = 8.dp)) { Text("← Volver a resultados") }
+                TextButton(onClick = { selected = null }, modifier = Modifier.padding(horizontal = 8.dp)) {
+                    Text("← Volver")
+                }
                 AccountDetailScreen(account = selected!!, modifier = Modifier.weight(1f))
             }
         } else {
@@ -126,17 +162,28 @@ private fun IptvMonitorApp() {
                     } else Text(if (mode == 0) "Consultar cuenta" else "Consultar todas")
                 }
                 message?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary) }
-                if (accounts.isEmpty()) {
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("Sin comprobaciones", style = MaterialTheme.typography.titleMedium)
-                            Text("Los resultados aparecerán aquí. Vencimiento y conexiones requieren una API compatible.", style = MaterialTheme.typography.bodyMedium)
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (accounts.isEmpty()) {
+                        item(key = "empty-results") {
+                            Card(Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("Sin comprobaciones", style = MaterialTheme.typography.titleMedium)
+                                    Text(
+                                        "Los resultados aparecerán aquí. Vencimiento y conexiones requieren una API compatible.",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
                         }
-                    }
-                } else {
-                    Text("Resultados (${accounts.size})", style = MaterialTheme.typography.titleMedium)
-                    LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(accounts, key = { it.id }) { account ->
+                    } else {
+                        item(key = "results-heading") {
+                            Text("Resultados del escaneo (${accounts.size})", style = MaterialTheme.typography.titleMedium)
+                        }
+                        items(accounts, key = { "result-${it.id}" }) { account ->
                             Card(Modifier.fillMaxWidth()) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -149,6 +196,46 @@ private fun IptvMonitorApp() {
                                     Text("Vence: ${account.expiresAt?.atZone(java.time.ZoneId.systemDefault())?.toLocalDate()?.toString() ?: "No disponible"}", style = MaterialTheme.typography.bodySmall)
                                     Text("Conexiones: ${account.connections.activeConnections ?: "—"} / ${account.connections.maxConnections ?: "—"}", style = MaterialTheme.typography.bodySmall)
                                     account.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                                    if (account.accountStatus == AccountStatus.ACTIVE || account.accountStatus == AccountStatus.TRIAL) {
+                                        TextButton(
+                                            onClick = { saveAccount(account) },
+                                            enabled = !isSaved(account)
+                                        ) {
+                                            Text(if (isSaved(account)) "Guardada" else "Guardar cuenta activa")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    item(key = "saved-heading") {
+                        Text("Cuentas guardadas (${savedAccounts.size})", style = MaterialTheme.typography.titleMedium)
+                    }
+                    if (savedAccounts.isEmpty()) {
+                        item(key = "saved-empty") {
+                            Card(Modifier.fillMaxWidth()) {
+                                Text(
+                                    "Aquí aparecerán las cuentas activas que guardes. Permanecen en este dispositivo aunque limpies el escaneo o cierres la app.",
+                                    modifier = Modifier.padding(16.dp),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    } else {
+                        items(savedAccounts, key = { "saved-${it.id}" }) { account ->
+                            Card(Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(account.accountName ?: account.username ?: "Cuenta IPTV", style = MaterialTheme.typography.titleMedium)
+                                            Text("Estado guardado: ${account.accountStatus.labelForUi()}", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        TextButton(onClick = { selected = account }) { Text("Detalles") }
+                                    }
+                                    Text("Servidor: ${account.server.serverUrl ?: "No disponible"}", style = MaterialTheme.typography.bodySmall)
+                                    Text("Vence: ${account.expiresAt?.atZone(java.time.ZoneId.systemDefault())?.toLocalDate()?.toString() ?: "No disponible"}", style = MaterialTheme.typography.bodySmall)
+                                    TextButton(onClick = { removeSaved(account) }) { Text("Quitar de guardadas") }
                                 }
                             }
                         }
