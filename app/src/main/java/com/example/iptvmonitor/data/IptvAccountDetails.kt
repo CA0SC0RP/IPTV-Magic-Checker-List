@@ -25,5 +25,7 @@ data class IptvAccountDetails(
     val error: String? = null
 ) {
     fun daysRemaining(nowEpochSeconds: Long = System.currentTimeMillis() / 1000): Long? =
-        expiresAt?.let { (it - nowEpochSeconds) / 86_400 }
+        expiresAt?.let { expiry ->
+            if (expiry <= nowEpochSeconds) -1L else (expiry - nowEpochSeconds) / 86_400
+        }
 }
