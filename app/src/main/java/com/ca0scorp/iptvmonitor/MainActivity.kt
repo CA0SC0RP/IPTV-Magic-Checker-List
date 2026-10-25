@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -74,7 +75,7 @@ private fun IptvMonitorApp() {
             }
         } else {
             Column(
-                Modifier.fillMaxSize().padding(padding).padding(16.dp),
+                Modifier.fillMaxSize().padding(padding).imePadding().padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -134,7 +135,7 @@ private fun IptvMonitorApp() {
                     }
                 } else {
                     Text("Resultados (${accounts.size})", style = MaterialTheme.typography.titleMedium)
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(accounts, key = { it.id }) { account ->
                             Card(Modifier.fillMaxWidth()) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -145,7 +146,7 @@ private fun IptvMonitorApp() {
                                         }
                                         TextButton(onClick = { selected = account }) { Text("Detalles") }
                                     }
-                                    Text("Vence: ${account.expiresAt?.toString() ?: "No disponible"}", style = MaterialTheme.typography.bodySmall)
+                                    Text("Vence: ${account.expiresAt?.atZone(java.time.ZoneId.systemDefault())?.toLocalDate()?.toString() ?: "No disponible"}", style = MaterialTheme.typography.bodySmall)
                                     Text("Conexiones: ${account.connections.activeConnections ?: "—"} / ${account.connections.maxConnections ?: "—"}", style = MaterialTheme.typography.bodySmall)
                                     account.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                                 }
