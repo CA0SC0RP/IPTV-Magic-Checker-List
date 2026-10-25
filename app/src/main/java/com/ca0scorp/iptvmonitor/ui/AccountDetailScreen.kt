@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -43,6 +44,8 @@ private val dateFormatter: DateTimeFormatter =
 fun AccountDetailScreen(
     account: IptvAccountDetails,
     modifier: Modifier = Modifier,
+    isSaved: Boolean = false,
+    onSave: () -> Unit = {},
     now: Instant = Instant.now()
 ) {
     val accountName = account.accountName.cleanOrNull()
@@ -67,6 +70,16 @@ fun AccountDetailScreen(
             }
             Spacer(Modifier.width(8.dp))
             AssistChip(onClick = {}, label = { Text(account.accountStatus.label()) })
+        }
+
+        if (account.accountStatus == AccountStatus.ACTIVE || account.accountStatus == AccountStatus.TRIAL) {
+            Button(
+                onClick = onSave,
+                enabled = !isSaved,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (isSaved) "Cuenta guardada" else "Guardar esta cuenta")
+            }
         }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
