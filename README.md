@@ -1,4 +1,4 @@
-# IPTV Monitor Android
+# IPTV Magic Checker List
 
 Aplicación Android para consultar información de cuentas IPTV en servidores compatibles, con modo individual y verificación por lotes.
 
