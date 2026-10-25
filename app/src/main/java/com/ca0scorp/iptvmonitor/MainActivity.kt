@@ -25,9 +25,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -216,7 +213,12 @@ private fun IptvMonitorApp() {
                 ) {
                     if (accounts.isEmpty()) {
                         item(key = "empty-results") {
-                            Card(Modifier.fillMaxWidth()) {
+                            Card(
+                                Modifier.fillMaxWidth(),
+                                colors = androidx.compose.material3.CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
+                            ) {
                                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text("Sin comprobaciones", style = MaterialTheme.typography.titleMedium)
                                     Text(
@@ -231,7 +233,12 @@ private fun IptvMonitorApp() {
                             Text("Resultados del escaneo (${accounts.size})", style = MaterialTheme.typography.titleMedium)
                         }
                         items(accounts, key = { "result-${it.id}" }) { account ->
-                            Card(Modifier.fillMaxWidth()) {
+                            Card(
+                                Modifier.fillMaxWidth(),
+                                colors = androidx.compose.material3.CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
+                            ) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Column(Modifier.weight(1f)) {
@@ -261,7 +268,12 @@ private fun IptvMonitorApp() {
                     }
                     if (savedAccounts.isEmpty()) {
                         item(key = "saved-empty") {
-                            Card(Modifier.fillMaxWidth()) {
+                            Card(
+                                Modifier.fillMaxWidth(),
+                                colors = androidx.compose.material3.CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
+                            ) {
                                 Text(
                                     "Aquí aparecerán las cuentas activas que guardes. Permanecen en este dispositivo aunque limpies el escaneo o cierres la app.",
                                     modifier = Modifier.padding(16.dp),
@@ -271,7 +283,12 @@ private fun IptvMonitorApp() {
                         }
                     } else {
                         items(savedAccounts, key = { "saved-${it.id}" }) { account ->
-                            Card(Modifier.fillMaxWidth()) {
+                            Card(
+                                Modifier.fillMaxWidth(),
+                                colors = androidx.compose.material3.CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                )
+                            ) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Column(Modifier.weight(1f)) {
