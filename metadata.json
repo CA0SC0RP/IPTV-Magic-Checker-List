@@ -1,0 +1,8 @@
+{
+  "name": "IPTV Magic Checker List",
+  "description": "Herramienta completa para verificar y diagnosticar cuentas IPTV y servidores Xtream Codes en modo individual y verificación masiva por lotes.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
