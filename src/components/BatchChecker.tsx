@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../utils/api';
 import React, { useState, useRef } from 'react';
 import { CheckResult, AccountInput } from '../types/iptv';
 import { parseAccountList } from '../utils/parser';
@@ -111,7 +112,7 @@ export const BatchChecker: React.FC = () => {
             if (!item) break;
 
             try {
-              const res = await fetch('/api/check-account', {
+              const res = await fetch(`${API_BASE_URL}/api/check-account', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
