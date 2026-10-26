@@ -1,44 +1,73 @@
-name: Android build
+
+name: Build Android APK
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
   push:
-    branches: [main, "feature/**"]
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
-  assemble:
+  build-apk:
+    name: Build IPTV Magic Checker APK
     runs-on: ubuntu-latest
-    env:
-      IPTV_SIGNING_KEYSTORE_BASE64: ${{ secrets.IPTV_SIGNING_KEYSTORE_BASE64 }}
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Set up JDK 17
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.9"
-      - name: Prepare stable signing key
-        if: ${{ env.IPTV_SIGNING_KEYSTORE_BASE64 != '' }}
+          java-version: "21"
+
+      - name: Install web dependencies
+        run: npm install
+
+      - name: Install Capacitor
+        run: npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Build web application
+        run: npm run build
+
+      - name: Configure Capacitor
         run: |
-          echo "$IPTV_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/iptv-monitor-signing.jks"
+          cat > capacitor.config.json <<'EOF'
+          {
+            "appId": "com.ca0sc0rp.iptvmagicchecker",
+            "appName": "IPTV Magic Checker",
+            "webDir": "dist"
+          }
+          EOF
+
+      - name: Create Android project
+        run: npx cap add android
+
+      - name: Sync Android project
+        run: npx cap sync android
+
       - name: Build debug APK
-        env:
-          IPTV_SIGNING_STORE_FILE: ${{ secrets.IPTV_SIGNING_KEYSTORE_BASE64 != '' && format('{0}/iptv-monitor-signing.jks', runner.temp) || '' }}
-          IPTV_SIGNING_STORE_PASSWORD: ${{ secrets.IPTV_SIGNING_STORE_PASSWORD }}
-          IPTV_SIGNING_KEY_ALIAS: ${{ secrets.IPTV_SIGNING_KEY_ALIAS }}
-          IPTV_SIGNING_KEY_PASSWORD: ${{ secrets.IPTV_SIGNING_KEY_PASSWORD }}
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
-        run: gradle assembleDebug
-      - name: Upload debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: iptv-monitor-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: IPTV-Magic-Checker-APK
+          path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
