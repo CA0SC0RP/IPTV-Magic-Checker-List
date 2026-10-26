@@ -138,7 +138,7 @@ export const SingleChecker: React.FC<SingleCheckerProps> = ({
     setStreamResult(null);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/check-account', {
+      const res = await fetch(`${API_BASE_URL}/api/check-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -220,7 +220,7 @@ export const SingleChecker: React.FC<SingleCheckerProps> = ({
     const streamUrl = `${cleanHost}/live/${encodeURIComponent(result.username)}/${encodeURIComponent(result.password || '')}/${encodeURIComponent(channel)}.${format}`;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/test-stream', {
+      const res = await fetch(`${API_BASE_URL}/api/test-stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ streamUrl, timeoutMs: 6000 }),
