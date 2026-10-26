@@ -35,7 +35,7 @@ export const AccessGeoDiagnosticCard: React.FC<AccessGeoDiagnosticCardProps> = (
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/diagnose-access', {
+      const res = await fetch(`${API_BASE_URL}/api/diagnose-access`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
