@@ -486,7 +486,55 @@ app.get('/api/mock-demo/player_api.php', (req: Request, res: Response) => {
       });
     }
 
-    // 7. Unknown Status Response
+    // 7. Saturated Account (3/3 Connections Active)
+    if (username === 'demo_saturated' && password === 'sat333') {
+      return res.json({
+        user_info: {
+          username: 'demo_saturated',
+          password: '••••••••',
+          auth: 1,
+          status: 'Active',
+          exp_date: '1798761600',
+          is_trial: '0',
+          active_cons: '3',
+          max_connections: '3',
+          allowed_output_formats: ['m3u8', 'ts'],
+        },
+        server_info: {
+          url: 'iptv-magic-demo.cloud',
+          port: '8080',
+          server_protocol: 'http',
+          time_now: '2026-10-26 21:50:00',
+          timezone: 'Europe/Madrid',
+        },
+      });
+    }
+
+    // 8. Geo-Locked Account (France - Locked by GeoIP / WAF)
+    if (username === 'demo_geolock' && password === 'lock777') {
+      return res.json({
+        user_info: {
+          username: 'demo_geolock',
+          password: '••••••••',
+          auth: 1,
+          status: 'Active',
+          exp_date: '1798761600',
+          is_trial: '0',
+          active_cons: '0',
+          max_connections: '2',
+          allowed_output_formats: ['m3u8', 'ts'],
+        },
+        server_info: {
+          url: 'iptv-magic-demo.cloud',
+          port: '8080',
+          server_protocol: 'http',
+          time_now: '2026-10-26 21:50:00',
+          timezone: 'Europe/Paris',
+        },
+      });
+    }
+
+    // 9. Unknown Status Response
     if (username === 'demo_unknown' && password === 'unk123') {
       return res.json({
         user_info: {
@@ -598,43 +646,554 @@ app.post('/api/batch-check', async (req: Request, res: Response) => {
   }
 });
 
+// Mock video stream route for demo accounts
+app.get('/api/mock-demo/sample-video.mp4', (_req: Request, res: Response) => {
+  // A tiny valid 1-second blank MP4 container
+  const base64Mp4 = 'AAAAHGZ0eXBtcDQyAAAAAG1wNDJpc29tYXZjMQAAAAhmcmVlAAAAmG1kYXQAAAAAAAABAAAA' +
+    'AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//' +
+    'AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//' +
+    'AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//AAAAAP//';
+  const buffer = Buffer.from(base64Mp4, 'base64');
+  res.setHeader('Content-Type', 'video/mp4');
+  res.setHeader('Content-Length', buffer.length);
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.send(buffer);
+});
+
+// Demo channels list for random testing
+const DEMO_CHANNELS = [
+  { stream_id: 101, name: 'ESPN Deportes HD', category_name: 'Deportes' },
+  { stream_id: 102, name: 'Fox Sports 1 HD', category_name: 'Deportes' },
+  { stream_id: 201, name: 'HBO Latino HD', category_name: 'Cine y Series' },
+  { stream_id: 202, name: 'Warner Channel HD', category_name: 'Entretenimiento' },
+  { stream_id: 301, name: 'Discovery Channel HD', category_name: 'Documentales' },
+  { stream_id: 302, name: 'National Geographic HD', category_name: 'Documentales' },
+  { stream_id: 401, name: 'Cartoon Network', category_name: 'Infantil' },
+  { stream_id: 501, name: 'CNN en Español', category_name: 'Noticias' },
+  { stream_id: 601, name: 'Canal de las Estrellas HD', category_name: 'Nacionales' },
+];
+
+// Endpoint: Fetch real or demo random channel
+app.post('/api/get-random-channel', async (req: Request, res: Response) => {
+  try {
+    const { host, username, password } = req.body;
+    if (!host || !username) {
+      return res.status(400).json({ success: false, error: 'Se requieren el servidor y el usuario' });
+    }
+
+    const cleanHost = normalizeHost(host);
+
+    // Mock Demo check
+    if (host === 'MOCK_DEMO' || cleanHost.includes('iptv-magic-demo') || cleanHost.includes('127.0.0.1')) {
+      const randomItem = DEMO_CHANNELS[Math.floor(Math.random() * DEMO_CHANNELS.length)];
+      return res.json({
+        success: true,
+        streamId: randomItem.stream_id,
+        name: randomItem.name,
+        category: randomItem.category_name,
+        totalChannels: DEMO_CHANNELS.length,
+        streamUrl: `http://iptv-magic-demo.cloud:8080/live/${encodeURIComponent(username)}/${encodeURIComponent(password || '')}/${randomItem.stream_id}.ts`,
+        previewVideoUrl: `http://127.0.0.1:${PORT}/api/mock-demo/sample-video.mp4`,
+      });
+    }
+
+    // Real IPTV Server: request player_api.php?username=...&password=...&action=get_live_streams
+    const targetUrl = `${cleanHost}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password || '')}&action=get_live_streams`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const response = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'IPTVSmartersPro/3.1.5 (Android/12; Mobile) VLC/3.0.18',
+        'Accept': 'application/json',
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return res.json({
+        success: false,
+        error: `El servidor respondió con código HTTP ${response.status}`,
+      });
+    }
+
+    const channelsData = await response.json();
+
+    if (!Array.isArray(channelsData) || channelsData.length === 0) {
+      return res.json({
+        success: false,
+        error: 'No se encontraron canales en la lista del servidor para esta cuenta.',
+      });
+    }
+
+    // Pick a random channel from list
+    const randomIndex = Math.floor(Math.random() * channelsData.length);
+    const selected = channelsData[randomIndex];
+    const streamId = selected.stream_id || selected.id || selected.num;
+
+    return res.json({
+      success: true,
+      streamId,
+      name: selected.name || `Canal ${streamId}`,
+      category: selected.category_name || selected.category_id || 'General',
+      icon: selected.stream_icon || null,
+      totalChannels: channelsData.length,
+      streamUrl: `${cleanHost}/live/${encodeURIComponent(username)}/${encodeURIComponent(password || '')}/${streamId}.ts`,
+      streamHlsUrl: `${cleanHost}/live/${encodeURIComponent(username)}/${encodeURIComponent(password || '')}/${streamId}.m3u8`,
+    });
+  } catch (err: any) {
+    return res.json({
+      success: false,
+      error: err?.message || 'Error al obtener la lista de canales del servidor',
+    });
+  }
+});
+
 // Stream connectivity probe (HEAD / Range GET test)
 app.post('/api/test-stream', async (req: Request, res: Response) => {
   try {
-    const { streamUrl, timeoutMs = 5000 } = req.body;
+    const { streamUrl, timeoutMs = 6000 } = req.body;
     if (!streamUrl) {
       return res.status(400).json({ error: 'Se requiere la URL del stream' });
     }
 
     const startTime = Date.now();
+
+    // Check if it's the internal demo mock server
+    if (streamUrl.includes('iptv-magic-demo') || streamUrl.includes('MOCK_DEMO')) {
+      const isExpired = streamUrl.includes('demo_expired');
+      const isBanned = streamUrl.includes('demo_banned');
+      const isBadUser = streamUrl.includes('demo_baduser');
+      const isSaturated = streamUrl.includes('demo_saturated');
+      const isGeoLocked = streamUrl.includes('demo_geolock');
+
+      if (isSaturated) {
+        return res.json({
+          reachable: false,
+          httpStatus: 403,
+          contentType: 'text/html',
+          latencyMs: 78,
+          streamUrl,
+          diagnosticTitle: 'Límite de Conexiones Simultáneas Alcanzado (3/3)',
+          diagnosticExplanation: 'Todas las conexiones permitidas (3/3) están ocupadas. El servidor Xtream rechaza la transmisión de nuevos canales hasta que se desconecte una pantalla.',
+        });
+      }
+
+      if (isGeoLocked) {
+        return res.json({
+          reachable: false,
+          httpStatus: 403,
+          contentType: 'text/html; charset=UTF-8',
+          latencyMs: 145,
+          streamUrl,
+          serverSoftware: 'cloudflare-waf',
+          diagnosticTitle: 'Bloqueo Geográfico / Geo-Lock (HTTP 403 Forbidden)',
+          diagnosticExplanation: 'El cortafuegos del servidor (Cloudflare WAF / Geo-IP) bloqueó la conexión. La transmisión de video está restringida a direcciones IP de Francia.',
+        });
+      }
+
+      if (isExpired || isBanned || isBadUser) {
+        return res.json({
+          reachable: false,
+          httpStatus: 403,
+          contentType: 'text/html',
+          latencyMs: 95,
+          streamUrl,
+          diagnosticTitle: 'Acceso Denegado al Stream (HTTP 403)',
+          diagnosticExplanation: isExpired
+            ? 'La cuenta ha caducado. El servidor rechaza la conexión de streaming.'
+            : isBanned
+            ? 'La cuenta está baneada por el administrador del panel.'
+            : 'Credenciales inválidas para abrir el canal.',
+        });
+      }
+
+      return res.json({
+        reachable: true,
+        httpStatus: 200,
+        contentType: 'video/mp2t (MPEG-TS Live Video)',
+        latencyMs: 82,
+        streamUrl,
+        bitrateEstimate: '4500 kbps (1080p60)',
+        serverSoftware: 'Xtream-Codes Pro / 2.9.3 (Demo)',
+        diagnosticTitle: 'Flujo de Video Activo y Transmitiendo',
+        diagnosticExplanation: 'El servidor respondió exitosamente con paquetes de video MPEG-TS. La cuenta tiene permisos de reproducción activos y conexiones disponibles.',
+        previewSampleUrl: `http://127.0.0.1:${PORT}/api/mock-demo/sample-video.mp4`,
+      });
+    }
+
+    // Real IPTV Server probe
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const response = await fetch(streamUrl, {
       method: 'GET',
       headers: {
-        'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
-        'Range': 'bytes=0-1024',
+        'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18 (Linux; Android 12)',
+        'Range': 'bytes=0-4096',
+        'Accept': '*/*',
+        'Connection': 'close',
       },
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
     const latency = Date.now() - startTime;
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const serverHeader = response.headers.get('server') || 'IPTV Stream Server';
+
+    let diagnosticTitle = 'Respuesta del Stream';
+    let diagnosticExplanation = '';
+    const isReachable = response.ok || response.status === 206 || response.status === 302;
+
+    if (response.status === 200 || response.status === 206) {
+      diagnosticTitle = 'Flujo de Video Activo (HTTP ' + response.status + ')';
+      diagnosticExplanation = 'El canal está transmitiendo paquetes multimedia en vivo correctamente. Las credenciales tienen autorización y hay cupo de conexión.';
+    } else if (response.status === 401 || response.status === 403) {
+      diagnosticTitle = 'Acceso Prohibido (HTTP ' + response.status + ')';
+      diagnosticExplanation = 'El servidor rechazó la reproducción. Posibles causas: límite de conexiones simultáneas alcanzado, bloqueo geográfico por país o canal fuera del paquete.';
+    } else if (response.status === 404) {
+      diagnosticTitle = 'Canal No Encontrado (HTTP 404)';
+      diagnosticExplanation = 'El identificador del canal (Stream ID) no existe en este servidor IPTV. Pruebe con otro ID de canal o descargue la lista M3U completa para ver los canales válidos.';
+    } else if (response.status === 500 || response.status === 502 || response.status === 503) {
+      diagnosticTitle = 'Error de Servidor / Transcodificador (HTTP ' + response.status + ')';
+      diagnosticExplanation = 'El servidor IPTV está en línea pero el transcodificador del canal falló o está saturado temporalmente.';
+    } else {
+      diagnosticTitle = `Código HTTP ${response.status}`;
+      diagnosticExplanation = `El servidor respondió con código ${response.status} (${response.statusText}).`;
+    }
 
     return res.json({
-      reachable: response.ok || response.status === 206 || response.status === 302,
+      reachable: isReachable,
       httpStatus: response.status,
-      contentType: response.headers.get('content-type') || 'desconocido',
+      contentType,
       latencyMs: latency,
+      streamUrl,
+      serverSoftware: serverHeader,
+      diagnosticTitle,
+      diagnosticExplanation,
     });
   } catch (err: any) {
+    let explanation = err?.message || 'Error de conexión desconocido';
+    if (err?.name === 'AbortError') {
+      explanation = 'Tiempo de espera agotado (>6s). El servidor no envió ningún paquete de video inicial.';
+    } else if (err?.code === 'ECONNREFUSED') {
+      explanation = 'El puerto de streaming del servidor está cerrado o bloqueado por firewall.';
+    }
+
     return res.json({
       reachable: false,
-      error: err?.message || 'Fallo de conexión al stream',
+      httpStatus: 0,
+      contentType: 'none',
+      latencyMs: 0,
+      streamUrl: req.body.streamUrl,
+      diagnosticTitle: 'Fallo de Conexión al Flujo',
+      diagnosticExplanation: explanation,
+      error: explanation,
     });
   }
 });
+
+// -------------------------------------------------------------
+// Endpoint: Comprehensive Access, Geo-Lock & Connection Saturation Diagnostic
+// -------------------------------------------------------------
+app.post('/api/diagnose-access', async (req: Request, res: Response) => {
+  try {
+    const { host, username, password, activeCons, maxCons, timezone } = req.body;
+
+    if (!host || !username) {
+      return res.status(400).json({ error: 'Se requieren el servidor y el usuario' });
+    }
+
+    const cleanHost = normalizeHost(host);
+    const numActive = Number(activeCons || 0);
+    const numMax = maxCons !== null && maxCons !== undefined && maxCons !== '' ? Number(maxCons) : null;
+    const isSaturated = numMax !== null && numMax > 0 && numActive >= numMax;
+
+    // Detect Country & Region heuristic from timezone and host
+    const tzLower = (timezone || '').toLowerCase();
+    const hostLower = host.toLowerCase();
+
+    let country = 'Internacional';
+    let flag = '🌐';
+    let region = 'Global';
+
+    if (hostLower.includes('.es') || tzLower.includes('madrid') || tzLower.includes('canary')) {
+      country = 'España'; flag = '🇪🇸'; region = 'Europa';
+    } else if (hostLower.includes('.mx') || tzLower.includes('mexico') || tzLower.includes('monterrey') || tzLower.includes('cancun')) {
+      country = 'México'; flag = '🇲🇽'; region = 'Norteamérica / Latam';
+    } else if (hostLower.includes('.co') || tzLower.includes('bogota')) {
+      country = 'Colombia'; flag = '🇨🇴'; region = 'Latinoamérica';
+    } else if (hostLower.includes('.ar') || tzLower.includes('buenos_aires') || tzLower.includes('argentina')) {
+      country = 'Argentina'; flag = '🇦🇷'; region = 'Latinoamérica';
+    } else if (hostLower.includes('.cl') || tzLower.includes('santiago')) {
+      country = 'Chile'; flag = '🇨🇱'; region = 'Latinoamérica';
+    } else if (hostLower.includes('.pe') || tzLower.includes('lima')) {
+      country = 'Perú'; flag = '🇵🇪'; region = 'Latinoamérica';
+    } else if (hostLower.includes('.fr') || tzLower.includes('paris')) {
+      country = 'Francia'; flag = '🇫🇷'; region = 'Europa';
+    } else if (hostLower.includes('.us') || tzLower.includes('new_york') || tzLower.includes('los_angeles') || tzLower.includes('chicago') || tzLower.includes('miami')) {
+      country = 'Estados Unidos'; flag = '🇺🇸'; region = 'Norteamérica';
+    } else if (hostLower.includes('.uk') || tzLower.includes('london')) {
+      country = 'Reino Unido'; flag = '🇬🇧'; region = 'Europa';
+    } else if (tzLower.includes('utc') || tzLower.includes('gmt')) {
+      country = 'Servidor Cloud (UTC)'; flag = '🌐'; region = 'Internacional';
+    } else if (timezone && timezone.includes('/')) {
+      const parts = timezone.split('/');
+      country = parts[1]?.replace(/_/g, ' ') || parts[0];
+      flag = '📍';
+      region = parts[0];
+    }
+
+    // Connection state
+    let connectionState: 'AVAILABLE' | 'SATURATED' | 'UNLIMITED' = 'AVAILABLE';
+    let connectionsSummary = '';
+
+    if (numMax === null) {
+      connectionState = 'UNLIMITED';
+      connectionsSummary = `Conexiones ilimitadas permitidas. Actualmente hay ${numActive} conexión(es) activa(s).`;
+    } else if (isSaturated) {
+      connectionState = 'SATURATED';
+      connectionsSummary = `Línea Saturada: ${numActive} de ${numMax} conexiones permitidas en uso simultáneo. Todas las pantallas autorizadas están ocupadas.`;
+    } else {
+      connectionState = 'AVAILABLE';
+      const freeSlots = numMax - numActive;
+      connectionsSummary = `Cupo Disponible: ${numActive} de ${numMax} conexiones en uso (${freeSlots} ranura${freeSlots === 1 ? '' : 's'} libre${freeSlots === 1 ? '' : 's'} para reproducir video).`;
+    }
+
+    // Check Mock Demo accounts
+    if (host === 'MOCK_DEMO' || cleanHost.includes('iptv-magic-demo') || cleanHost.includes('127.0.0.1')) {
+      if (username === 'demo_saturated') {
+        return res.json({
+          geoLockStatus: 'SATURATED_BLOCKED',
+          geoLockLabel: 'Bloqueo por Cupo de Conexiones Lleno (3/3)',
+          geoLockColor: 'rose',
+          country: 'España',
+          flag: '🇪🇸',
+          region: 'Europa',
+          timezone: timezone || 'Europe/Madrid',
+          connectionState: 'SATURATED',
+          activeCons: 3,
+          maxCons: 3,
+          isSaturated: true,
+          connectionsSummary: 'Línea Saturada: 3 de 3 conexiones activas en este momento.',
+          geoExplanation: 'El servidor Xtream Codes bloquea de inmediato nuevas conexiones de streaming porque se alcanzó el cupo máximo contratado (3/3). Ningún reproductor podrá sintonizar canales hasta que se desconecte una pantalla.',
+          wafDetected: false,
+          testedStreamId: 101,
+          testedFormat: 'ts',
+          latencyMs: 78,
+          httpStatus: 403,
+          recommendations: [
+            'Desconecta al menos un dispositivo activo (TV, smartphone o PC) para liberar una ranura.',
+            'Verifica con tu proveedor la ampliación a un plan multi-pantalla si requieres más conexiones.',
+            'No compartas tus credenciales de lista si tu suscripción tiene cupos limitados.',
+          ],
+        });
+      }
+
+      if (username === 'demo_geolock') {
+        return res.json({
+          geoLockStatus: 'GEO_RESTRICTED',
+          geoLockLabel: 'Geo-Restringida / Bloqueada por País (Geo-Lock Activo)',
+          geoLockColor: 'amber',
+          country: 'Francia',
+          flag: '🇫🇷',
+          region: 'Europa',
+          timezone: timezone || 'Europe/Paris',
+          connectionState: 'AVAILABLE',
+          activeCons: 0,
+          maxCons: 2,
+          isSaturated: false,
+          connectionsSummary: 'Cupo Disponible: 0 de 2 conexiones en uso.',
+          geoExplanation: 'El servidor autenticó la cuenta con éxito, pero la entrega de streams está restringida geográficamente a direcciones IP de Francia. Las solicitudes internacionales son bloqueadas por Cloudflare WAF / Geo-IP con código HTTP 403.',
+          wafDetected: true,
+          testedStreamId: 101,
+          testedFormat: 'ts',
+          latencyMs: 142,
+          httpStatus: 403,
+          recommendations: [
+            'Conéctate a una VPN con nodo en Francia antes de abrir la lista o probar canales.',
+            'Contacta al administrador del servicio para solicitar habilitación de acceso "Global / Worldwide".',
+            'Comprueba si tu reproductor IPTV (TiviMate, Smarters Pro) soporta proxy HTTP.',
+          ],
+        });
+      }
+
+      // Default Demo (VIP Open World)
+      return res.json({
+        geoLockStatus: 'OPEN_WORLD',
+        geoLockLabel: 'Lista Abierta Mundialmente (Global / Sin Geo-Bloqueo)',
+        geoLockColor: 'emerald',
+        country: country || 'España',
+        flag: flag || '🇪🇸',
+        region: region || 'Europa',
+        timezone: timezone || 'Europe/Madrid',
+        connectionState: isSaturated ? 'SATURATED' : 'AVAILABLE',
+        activeCons: numActive,
+        maxCons: numMax,
+        isSaturated,
+        connectionsSummary,
+        geoExplanation: 'El servidor entrega paquetes de video MPEG-TS sin restricciones geográficas de IP ni cortafuegos de país. Puede reproducirse desde cualquier país del mundo sin requerir VPN ni IP dedicada.',
+        wafDetected: false,
+        testedStreamId: 101,
+        testedFormat: 'ts',
+        latencyMs: 82,
+        httpStatus: 200,
+        recommendations: [
+          'La lista es totalmente compatible con reproductores de cualquier país sin necesidad de VPN.',
+          'Puedes importar directamente el enlace M3U en Smart TV, VLC o Kodi.',
+          'Conserva el cupo de conexiones simultáneas dentro del límite permitido para evitar cortes.',
+        ],
+      });
+    }
+
+    // Real IPTV Server: Probe random channel or stream ID 1
+    let testedStreamId: string | number = 1;
+    let streamProbeUrl = `${cleanHost}/live/${encodeURIComponent(username)}/${encodeURIComponent(password || '')}/1.ts`;
+
+    try {
+      // First attempt to get one real channel ID if possible
+      const listController = new AbortController();
+      const listTimeout = setTimeout(() => listController.abort(), 4000);
+      const listRes = await fetch(
+        `${cleanHost}/player_api.php?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password || '')}&action=get_live_streams`,
+        {
+          headers: { 'User-Agent': 'IPTVSmartersPro/3.1.5 VLC/3.0.18' },
+          signal: listController.signal,
+        }
+      );
+      clearTimeout(listTimeout);
+
+      if (listRes.ok) {
+        const channels = await listRes.json();
+        if (Array.isArray(channels) && channels.length > 0) {
+          const firstChan = channels[0];
+          testedStreamId = firstChan.stream_id || firstChan.id || 1;
+          streamProbeUrl = `${cleanHost}/live/${encodeURIComponent(username)}/${encodeURIComponent(password || '')}/${testedStreamId}.ts`;
+        }
+      }
+    } catch {
+      // Fallback to stream 1
+    }
+
+    // Now probe the stream URL
+    const probeStartTime = Date.now();
+    const probeController = new AbortController();
+    const probeTimeout = setTimeout(() => probeController.abort(), 6000);
+
+    let probeStatus = 0;
+    let probeContentType = '';
+    let isWaf = false;
+    let probeSuccess = false;
+
+    try {
+      const probeRes = await fetch(streamProbeUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18 (Linux; Android 12)',
+          'Range': 'bytes=0-2048',
+          'Accept': '*/*',
+        },
+        signal: probeController.signal,
+      });
+
+      clearTimeout(probeTimeout);
+      probeStatus = probeRes.status;
+      probeContentType = probeRes.headers.get('content-type') || '';
+      const serverHeader = (probeRes.headers.get('server') || '').toLowerCase();
+      const cfRay = probeRes.headers.get('cf-ray');
+
+      if (serverHeader.includes('cloudflare') || cfRay || probeRes.headers.get('cf-mitigated')) {
+        isWaf = true;
+      }
+
+      if (probeRes.ok || probeRes.status === 206 || probeRes.status === 302) {
+        probeSuccess = true;
+      }
+    } catch (probeErr: any) {
+      clearTimeout(probeTimeout);
+      probeStatus = 0;
+    }
+
+    const latencyMs = Date.now() - probeStartTime;
+
+    // Evaluate final Geo-Lock and Access verdict
+    let geoLockStatus: 'OPEN_WORLD' | 'GEO_RESTRICTED' | 'SATURATED_BLOCKED' | 'UNKNOWN' | 'OFFLINE' = 'UNKNOWN';
+    let geoLockLabel = 'Estado de Acceso No Determinado';
+    let geoLockColor: 'emerald' | 'amber' | 'rose' | 'blue' | 'purple' = 'amber';
+    let geoExplanation = '';
+    const recommendations: string[] = [];
+
+    if (probeSuccess) {
+      geoLockStatus = 'OPEN_WORLD';
+      geoLockLabel = 'Lista Abierta Mundialmente (Global / Sin Geo-Bloqueo)';
+      geoLockColor = 'emerald';
+      geoExplanation = `El servidor entregó paquetes de video multimedia en vivo (${probeContentType || 'video/mp2t'}) sin filtros geográficos ni bloqueos de país. La señal puede sintonizarse desde cualquier ubicación geográfica.`;
+      recommendations.push('Esta lista no requiere VPN para reproducir canales.');
+      recommendations.push('Funciona de forma directa en Smart TV, VLC, TiviMate y Kodi.');
+      if (isSaturated) {
+        recommendations.push(`Nota: Aunque el streaming está abierto, tu cuenta tiene ${numActive} de ${numMax} conexiones activas.`);
+      }
+    } else if (isSaturated && (probeStatus === 401 || probeStatus === 403 || probeStatus === 0)) {
+      geoLockStatus = 'SATURATED_BLOCKED';
+      geoLockLabel = `Bloqueo por Cupo de Conexiones Lleno (${numActive}/${numMax})`;
+      geoLockColor = 'rose';
+      geoExplanation = `El servidor denegó la transmisión de video (HTTP ${probeStatus || 'Drop'}) debido a que las ${numMax} conexiones permitidas están ocupadas por otros dispositivos en este instante. No se puede comprobar la apertura de país hasta que haya una ranura libre.`;
+      recommendations.push(`Desconecta al menos uno de los ${numActive} dispositivos activos para liberar espacio.`);
+      recommendations.push('Una vez liberada una conexión, vuelve a probar para verificar si la señal se transmite.');
+      recommendations.push('Revisa quién más tiene acceso a tu usuario y contraseña de IPTV.');
+    } else if (probeStatus === 403 || probeStatus === 451 || isWaf) {
+      geoLockStatus = 'GEO_RESTRICTED';
+      geoLockLabel = `Geo-Restringida / Bloqueada por País (${country})`;
+      geoLockColor = 'amber';
+      geoExplanation = `El servidor autenticó la cuenta pero rechazó la solicitud de video con código HTTP ${probeStatus} (Firewall / Cloudflare WAF detectado). Los proveedores aplican esta regla para restringir el ancho de banda exclusivamente a usuarios con IP local de ${country}.`;
+      recommendations.push(`Conéctate a una VPN con servidor en ${country} antes de abrir los enlaces.`);
+      recommendations.push(`Verifica si tu proveedor ofrece listas "Globales / Sin Bloqueo de ISP".`);
+      recommendations.push('Prueba usando formato HLS (.m3u8) en lugar de MPEG-TS (.ts) en tu reproductor.');
+    } else if (probeStatus === 0) {
+      geoLockStatus = 'OFFLINE';
+      geoLockLabel = 'Puerto de Streaming Sin Respuesta (Timeout / Caída)';
+      geoLockColor = 'rose';
+      geoExplanation = 'El servidor API respondió a la autenticación, pero el puerto de entrega de canales no respondió en 6 segundos. El transcodificador podría estar temporalmente fuera de línea.';
+      recommendations.push('Verifica si el puerto del host está abierto o si el servidor está en mantenimiento.');
+      recommendations.push('Comprueba si el servidor requiere HTTPS o un puerto específico.');
+    } else {
+      geoLockStatus = 'UNKNOWN';
+      geoLockLabel = `Respuesta HTTP ${probeStatus}`;
+      geoLockColor = 'blue';
+      geoExplanation = `El servidor respondió con código HTTP ${probeStatus} al solicitar el canal de prueba.`;
+      recommendations.push('Prueba con otro canal en la opción "Probar Canal Random (Smart TV)".');
+    }
+
+    return res.json({
+      geoLockStatus,
+      geoLockLabel,
+      geoLockColor,
+      country,
+      flag,
+      region,
+      timezone: timezone || 'UTC',
+      connectionState,
+      activeCons: numActive,
+      maxCons: numMax,
+      isSaturated,
+      connectionsSummary,
+      geoExplanation,
+      wafDetected: isWaf,
+      testedStreamId,
+      testedFormat: 'ts',
+      latencyMs,
+      httpStatus: probeStatus,
+      recommendations,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message || 'Error al diagnosticar acceso y geolocalización' });
+  }
+});
+
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {

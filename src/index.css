@@ -5,6 +5,10 @@
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
   
+  .font-brand {
+    font-family: 'Space Grotesk', 'Outfit', sans-serif;
+  }
+  
   code, pre {
     font-family: 'JetBrains Mono', monospace;
   }
