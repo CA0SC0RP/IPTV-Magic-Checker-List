@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../utils/api';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
@@ -62,7 +63,7 @@ export const RetroTvPlayer: React.FC<RetroTvPlayerProps> = ({
     setVideoError(false);
 
     try {
-      const res = await fetch('/api/get-random-channel', {
+      const res = await fetch(`${API_BASE_URL}/api/get-random-channel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ host, username, password }),
@@ -75,7 +76,7 @@ export const RetroTvPlayer: React.FC<RetroTvPlayerProps> = ({
 
         // Run stream test probe in background
         const probeStart = Date.now();
-        fetch('/api/test-stream', {
+        fetch(`${API_BASE_URL}/api/test-stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ streamUrl: data.streamUrl, timeoutMs: 5000 }),
