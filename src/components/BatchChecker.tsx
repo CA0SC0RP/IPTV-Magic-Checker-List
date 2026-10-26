@@ -112,7 +112,7 @@ export const BatchChecker: React.FC = () => {
             if (!item) break;
 
             try {
-              const res = await fetch(`${API_BASE_URL}/api/check-account', {
+              const res = await fetch(`${API_BASE_URL}/api/check-account`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
