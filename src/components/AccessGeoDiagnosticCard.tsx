@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../utils/api';
 import React, { useState, useEffect } from 'react';
 import { AccessDiagnosis, CheckResult } from '../types/iptv';
 import { detectGeoFromTimezone } from '../utils/geo';
@@ -34,7 +35,7 @@ export const AccessGeoDiagnosticCard: React.FC<AccessGeoDiagnosticCardProps> = (
     setLoading(true);
 
     try {
-      const res = await fetch('/api/diagnose-access', {
+      const res = await fetch(`${API_BASE_URL}/api/diagnose-access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
