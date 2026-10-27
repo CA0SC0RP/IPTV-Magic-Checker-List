@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { CheckResult, AccountInput } from '../types/iptv';
+import { CheckResult, AccountInput, SavedAccount } from '../types/iptv';
 import { parseAccountList } from '../utils/parser';
 import {
   Play,
@@ -21,7 +21,9 @@ import {
   StopCircle,
   Sliders,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  BookmarkPlus,
+  BookmarkCheck
 } from 'lucide-react';
 
 const DEMO_BATCH_ACCOUNTS: AccountInput[] = [
@@ -35,7 +37,11 @@ const DEMO_BATCH_ACCOUNTS: AccountInput[] = [
   { host: 'http://servidor-offline-falla.xyz:8080', username: 'testuser', password: 'secret123' },
 ];
 
-export const BatchChecker: React.FC = () => {
+interface BatchCheckerProps {
+  onSaveAccount: (account: SavedAccount) => void;
+}
+
+export const BatchChecker: React.FC<BatchCheckerProps> = ({ onSaveAccount }) => {
   const [inputText, setInputText] = useState('');
   const [concurrency, setConcurrency] = useState(3);
   const [timeoutMs, setTimeoutMs] = useState(7000);
@@ -190,7 +196,7 @@ export const BatchChecker: React.FC = () => {
     a.href = url;
     a.download = `cuentas_activas_${Date.now()}.m3u`;
     a.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const exportCSV = () => {
@@ -216,7 +222,10 @@ export const BatchChecker: React.FC = () => {
   };
 
   const exportJSON = () => {
-    if (results.length === 0) return;
+    if (results.length === 0) {
+      alert('No hay resultados para exportar.');
+      return;
+    }
     const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -558,17 +567,17 @@ export const BatchChecker: React.FC = () => {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="w-full overflow-x-hidden">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800 font-semibold">
                 <tr>
                   <th className="px-4 py-3">Estado</th>
-                  <th className="px-4 py-3">Servidor</th>
-                  <th className="px-4 py-3">Usuario</th>
-                  <th className="px-4 py-3">Vencimiento</th>
-                  <th className="px-4 py-3">Conexiones</th>
-                  <th className="px-4 py-3">Latencia</th>
-                  <th className="px-4 py-3 text-right">Acciones</th>
+                  <th className="px-2 sm:px-4 py-3">Servidor</th>
+                  <th className="px-2 sm:px-4 py-3">Usuario</th>
+                  <th className="hidden md:table-cell px-4 py-3">Vencimiento</th>
+                  <th className="hidden lg:table-cell px-4 py-3">Conexiones</th>
+                  <th className="hidden sm:table-cell px-4 py-3">Latencia</th>
+                  <th className="px-2 sm:px-4 py-3 text-right">Detalles</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-sans">
@@ -591,8 +600,11 @@ export const BatchChecker: React.FC = () => {
                       >
                         {/* Status Badge */}
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                          <button
+                            type="button"
+                            onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                            aria-expanded={isExpanded}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400/60 ${
                               item.status === 'ACTIVE'
                                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                                 : item.status === 'EXPIRED'
@@ -611,21 +623,21 @@ export const BatchChecker: React.FC = () => {
                             {item.status === 'AUTH_FAILED' && <XCircle className="w-3 h-3 text-rose-400" />}
                             {item.status === 'CONNECTION_ERROR' && <AlertTriangle className="w-3 h-3 text-red-400" />}
                             {item.statusLabel}
-                          </span>
+                          </button>
                         </td>
 
                         {/* Server */}
-                        <td className="px-4 py-3 font-mono text-slate-300 max-w-xs truncate" title={item.host}>
+                        <td className="px-2 sm:px-4 py-3 font-mono text-slate-300 max-w-[120px] sm:max-w-xs truncate" title={item.host}>
                           {item.host}
                         </td>
 
                         {/* Username */}
-                        <td className="px-4 py-3 font-mono font-medium text-slate-100">
+                        <td className="px-2 sm:px-4 py-3 font-mono font-medium text-slate-100 max-w-[90px] sm:max-w-none truncate">
                           {item.username}
                         </td>
 
                         {/* Expiry */}
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <td className="hidden md:table-cell px-4 py-3 whitespace-nowrap">
                           {item.isUnlimited ? (
                             <span className="text-emerald-400 font-semibold">Ilimitada</span>
                           ) : item.expDate ? (
@@ -649,19 +661,19 @@ export const BatchChecker: React.FC = () => {
                         </td>
 
                         {/* Connections */}
-                        <td className="px-4 py-3 whitespace-nowrap font-mono text-slate-300">
+                        <td className="hidden lg:table-cell px-4 py-3 whitespace-nowrap font-mono text-slate-300">
                           {item.maxCons !== null && item.maxCons !== undefined
                             ? `${item.activeCons ?? 0} / ${item.maxCons}`
                             : '—'}
                         </td>
 
                         {/* Latency */}
-                        <td className="px-4 py-3 whitespace-nowrap font-mono text-cyan-400">
+                        <td className="hidden sm:table-cell px-4 py-3 whitespace-nowrap font-mono text-cyan-400">
                           {item.latencyMs > 0 ? `${item.latencyMs} ms` : '—'}
                         </td>
 
                         {/* Actions */}
-                        <td className="px-4 py-3 text-right whitespace-nowrap space-x-1">
+                        <td className="px-2 sm:px-4 py-3 text-right whitespace-nowrap space-x-1">
                           {item.status === 'ACTIVE' && (
                             <button
                               onClick={() => handleCopy(m3uUrl, `m3u_${item.id}`)}
@@ -690,6 +702,14 @@ export const BatchChecker: React.FC = () => {
                         <tr className="bg-slate-950/70 border-b border-slate-800">
                           <td colSpan={7} className="px-6 py-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                              <div className="md:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg border border-slate-800 bg-slate-900 p-3">
+                                <div><span className="block text-slate-500 text-[10px] uppercase">Servidor</span><span className="block break-all text-slate-200">{item.host}</span></div>
+                                <div><span className="block text-slate-500 text-[10px] uppercase">Usuario</span><span className="block break-all text-slate-200">{item.username}</span></div>
+                                <div><span className="block text-slate-500 text-[10px] uppercase">Vencimiento</span><span className="block text-slate-200">{item.isUnlimited ? 'Ilimitada' : item.expDate || 'No disponible'}</span></div>
+                                <div><span className="block text-slate-500 text-[10px] uppercase">Conexiones</span><span className="block text-slate-200">{item.maxCons !== null && item.maxCons !== undefined ? `${item.activeCons ?? 0} / ${item.maxCons}` : 'No disponible'}</span></div>
+                                <div className="col-span-2 sm:col-span-4"><span className="block text-slate-500 text-[10px] uppercase">Contraseña</span><span className="block break-all text-slate-200">{item.password || 'No disponible'}</span></div>
+                                {item.status === 'ACTIVE' && <div className="col-span-2 sm:col-span-4"><button type="button" onClick={() => onSaveAccount({ id: `${item.host}|${item.username}|${Date.now()}`, host: item.host, username: item.username, password: item.password, expDate: item.expDate, daysRemaining: item.daysRemaining, isUnlimited: item.isUnlimited, status: item.status, statusLabel: item.statusLabel, timezone: item.timezone, savedAt: new Date().toISOString() })} className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 font-semibold text-emerald-300 hover:bg-emerald-500/20"><BookmarkPlus className="h-4 w-4" />Guardar lista activa</button></div>}
+                              </div>
                               {/* Diagnosis message */}
                               <div className="md:col-span-2 space-y-1">
                                 <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider">
