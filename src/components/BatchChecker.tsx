@@ -700,7 +700,8 @@ export const BatchChecker: React.FC<BatchCheckerProps> = ({ onSaveAccount }) => 
                       {/* Expanded Details Row */}
                       {isExpanded && (
                         <tr className="bg-slate-950/70 border-b border-slate-800">
-                          <td colSpan={7} className="px-6 py-4">
+                          <td colSpan={7} className="px-3 sm:px-6 py-4">
+                            <div className="mx-1 sm:mx-2 rounded-xl border border-slate-700/80 bg-slate-900/40 p-3 sm:p-4 shadow-inner">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                               <div className="md:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg border border-slate-800 bg-slate-900 p-3">
                                 <div><span className="block text-slate-500 text-[10px] uppercase">Servidor</span><span className="block break-all text-slate-200">{item.host}</span></div>
@@ -734,6 +735,7 @@ export const BatchChecker: React.FC<BatchCheckerProps> = ({ onSaveAccount }) => 
                                 <div className="text-slate-300">Hora: {item.serverTime || 'No especificada'}</div>
                                 <div className="text-slate-300">Formatos: {item.allowedFormats?.join(', ') || 'ts, m3u8'}</div>
                               </div>
+                            </div>
                             </div>
                           </td>
                         </tr>
