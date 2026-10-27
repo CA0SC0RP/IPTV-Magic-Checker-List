@@ -231,7 +231,7 @@ export const BatchChecker: React.FC<BatchCheckerProps> = ({ onSaveAccount }) => 
     a.href = url;
     a.download = `iptv_results_${Date.now()}.json`;
     a.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   // Counters
