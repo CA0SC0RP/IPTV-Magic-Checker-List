@@ -119,7 +119,7 @@ export function App() {
           />
         )}
 
-        {activeTab === 'batch' && <BatchChecker />}
+        {activeTab === 'batch' && <BatchChecker onSaveAccount={handleSaveAccount} />}
 
         {activeTab === 'saved' && (
           <SavedAccounts
