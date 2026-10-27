@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../utils/api';
 import React, { useState, useEffect } from 'react';
 import { CheckResult, SavedAccount } from '../types/iptv';
 import { parseAccountLine } from '../utils/parser';
@@ -137,7 +138,7 @@ export const SingleChecker: React.FC<SingleCheckerProps> = ({
     setStreamResult(null);
 
     try {
-      const res = await fetch('/api/check-account', {
+      const res = await fetch(`${API_BASE_URL}/api/check-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
