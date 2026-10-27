@@ -22,8 +22,7 @@ import {
   Sliders,
   ChevronDown,
   ChevronUp,
-  BookmarkPlus,
-  BookmarkCheck
+  BookmarkPlus
 } from 'lucide-react';
 
 const DEMO_BATCH_ACCOUNTS: AccountInput[] = [
@@ -218,7 +217,7 @@ export const BatchChecker: React.FC<BatchCheckerProps> = ({ onSaveAccount }) => 
     a.href = url;
     a.download = `informe_iptv_checker_${Date.now()}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const exportJSON = () => {
